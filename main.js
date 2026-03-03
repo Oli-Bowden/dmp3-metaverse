@@ -11,10 +11,13 @@ const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.7;
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // mobile/HiDPI friendly
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
 document.body.appendChild(renderer.domElement);
+
+// Load restart buttons
+const restartVideoBtn = document.getElementById("restartVideoBtn");
+const restartAudioBtn = document.getElementById("restartAudioBtn");
 
 // Controls
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
@@ -95,30 +98,36 @@ scene.add(wall);
 const video = document.createElement("video");
 video.src = "assets/video.mp4";
 video.loop = true;
-video.muted = true;               // start muted; we unmute on click
-video.playsInline = true;         // mobile-friendly
-video.setAttribute('playsinline', '');
-video.webkitPlaysInline = true;
-video.crossOrigin = 'anonymous';
+video.muted = true;
+video.playsInline = true;
 video.load();
 
 const videoTexture = new THREE.VideoTexture(video);
-// IMPORTANT: Fix video colour + filtering + aliasing for r140
 videoTexture.colorSpace = THREE.sRGBColorSpace;
 videoTexture.minFilter = THREE.LinearFilter;
 videoTexture.magFilter = THREE.LinearFilter;
 videoTexture.generateMipmaps = false;
 videoTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-videoTexture.wrapS = THREE.ClampToEdgeWrapping;
-videoTexture.wrapT = THREE.ClampToEdgeWrapping;
 
-// True 16:9 plane for 1080p/4K content (adjust size if you like)
 const mainScreen = new THREE.Mesh(
-  new THREE.PlaneGeometry(12.8, 7.2),  // 16:9 at smaller size
+  new THREE.PlaneGeometry(12.8, 7.2),
   new THREE.MeshBasicMaterial({ map: videoTexture, side: THREE.DoubleSide })
 );
 mainScreen.position.set(0, 6.25, -13.7);
 scene.add(mainScreen);
+
+// ================= SIDE PANELS =================
+function createPanel(w, h, emissive) {
+  return new THREE.Mesh(
+    new THREE.PlaneGeometry(w, h),
+    new THREE.MeshStandardMaterial({
+      color: 0x000000,
+      emissive,
+      emissiveIntensity: 0.6,
+      side: THREE.DoubleSide
+    })
+  );
+}
 
 // ================= AVATARS =================
 function createAvatar(color) {
@@ -149,7 +158,7 @@ const attendees = [];
   0xaa88ff, 0x33ddff, 0x88ffcc, 0xff88aa
 ].forEach((c, i, arr) => {
   const avatar = createAvatar(c);
-  const angle = (i / arr.length) * Math.PI * 2; // even spacing
+  const angle = (i / arr.length) * Math.PI * 2;
   const radius = 11 + (i % 2) * 1.5;
   avatar.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
   avatar.lookAt(0, 1.5, 0);
@@ -157,7 +166,7 @@ const attendees = [];
   attendees.push(avatar);
 });
 
-// ================= CTA TABS =================
+// ================= CTA BUTTON CREATOR =================
 function createCTATab(text, width = 7, height = 1.2) {
   const canvas = document.createElement("canvas");
   canvas.width = 2048;
@@ -166,14 +175,13 @@ function createCTATab(text, width = 7, height = 1.2) {
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  // Flat rectangle (square corners), gradient for subtle depth
   const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
   gradient.addColorStop(0, "#2b74ff");
   gradient.addColorStop(1, "#1e5df8");
+
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // White text
   ctx.fillStyle = "#ffffff";
   ctx.font = `${Math.round(canvas.height * 0.30)}px sans-serif`;
   ctx.textAlign = "center";
@@ -181,50 +189,47 @@ function createCTATab(text, width = 7, height = 1.2) {
   ctx.fillText(text, canvas.width / 2, canvas.height / 2);
 
   const tex = new THREE.CanvasTexture(canvas);
-  tex.encoding = THREE.sRGBEncoding;
+  tex.colorSpace = THREE.SRGBColorSpace;
 
-  // Use Basic so UI looks crisp (not lit)
-  const mat = new THREE.MeshBasicMaterial({ map: tex });
+  const mat = new THREE.MeshStandardMaterial({
+    map: tex,
+    metalness: 0.3,
+    roughness: 0.6
+  });
 
-  // Thin box so it has real depth (not just a plane)
   const geo = new THREE.BoxGeometry(width, height, 0.12);
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.renderOrder = 999; // keep on top visually
-  mesh.castShadow = false;
-  mesh.receiveShadow = false;
+  mesh.renderOrder = 999;
 
   return mesh;
 }
 
+// ================= CTA UNDER VIDEO =================
+const ctaVideo = createCTATab("Find out more about Scientific Computing", 6, 1);
+ctaVideo.position.set(0, 1.8, -13.6);
+scene.add(ctaVideo);
+ctaVideo.userData.type = "video";
+
+// CTA icon updater
 function updateCTAIcon(mesh, isPlaying, label) {
   const canvas = mesh.material.map.image;
   const ctx = canvas.getContext("2d");
 
-  // Redraw background
-  const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  gradient.addColorStop(0, "#2b74ff");
-  gradient.addColorStop(1, "#1e5df8");
-  ctx.fillStyle = gradient;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#1e5df8";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Text with icon
   ctx.fillStyle = "#fff";
-  ctx.font = `${Math.round(canvas.height * 0.30)}px sans-serif`;
+  ctx.font = `${Math.round(canvas.height * 0.5)}px sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
+
   const icon = isPlaying ? "❚❚" : "►";
   ctx.fillText(`${icon}  ${label}`, canvas.width / 2, canvas.height / 2);
 
   mesh.material.map.needsUpdate = true;
 }
 
-// Video CTA (below screen)
-const ctaVideo = createCTATab("Find out more about Scientific Computing", 7, 1.2);
-ctaVideo.position.set(0, 1.8, -13.6);
-scene.add(ctaVideo);
-
-// ================= LOAD 3D MODEL =================
+// ================= LOAD MODEL =================
 const loader = new THREE.GLTFLoader();
 let modelRoot = null;
 
@@ -239,149 +244,206 @@ loader.load(
       }
     });
 
-    // Auto-scale model to exactly ~6 units tall
     const box = new THREE.Box3().setFromObject(modelRoot);
     const size = new THREE.Vector3();
     box.getSize(size);
+
     const targetHeight = 6;
     const scale = size.y > 0 ? targetHeight / size.y : 1;
     modelRoot.scale.setScalar(scale);
 
-    // Recompute box, place at chosen spot (center here; adjust as you like)
-    const box2 = new THREE.Box3().setFromObject(modelRoot);
-    const min = box2.min;
-    modelRoot.position.set(0, -min.y + 2, 0);
+    modelRoot.position.set(0, 2, 0);
     scene.add(modelRoot);
 
-    // Soft ambient for visibility
     const modelAmbient = new THREE.AmbientLight(0xffffff, 0.55);
     scene.add(modelAmbient);
   },
   undefined,
-  (err) => {
-    console.error("Failed to load model:", err);
-  }
+  (err) => console.error("Failed to load model:", err)
 );
 
-// Model CTA (positioned relative to model)
-const ctaModel = createCTATab("Find out more about the quantum level", 7, 1.2);
+// ================= CTA UNDER MODEL =================
+const ctaModel = createCTATab("Find out more about the quantum level", 6, 1);
 ctaModel.position.set(0, 9.25, 0);
 scene.add(ctaModel);
+ctaModel.userData.type = "voice";
 
-// Face-camera helper (video CTA fixed; model CTA Y-only billboard)
+// Billboard control
 function faceCamera(mesh, allowYOnly = false) {
   const v = new THREE.Vector3();
   camera.getWorldPosition(v);
+
   if (allowYOnly) {
     mesh.lookAt(v.x, mesh.position.y, v.z);
   } else {
-    mesh.rotation.set(0, 0, 0); // fixed orientation (for video CTA)
+    mesh.rotation.set(0, 0, 0);
   }
 }
 
-// ================= VOICEOVER (MP3) =================
+// ================= VOICEOVER =================
 const voiceover = new Audio("assets/quantum-voiceover.mp3");
 voiceover.preload = "auto";
 voiceover.loop = false;
 voiceover.muted = true;
 
-// --- One‑time mobile unlock for media (iOS/Android) ---
-function unlockMediaOnce() {
-  const tryVideo = video.play().then(() => { video.pause(); }).catch(() => {});
-  const tryVoice = voiceover.play().then(() => { voiceover.pause(); }).catch(() => {});
-  Promise.allSettled([tryVideo, tryVoice]).finally(() => {
-    window.removeEventListener('pointerdown', unlockMediaOnce);
-    window.removeEventListener('touchend', unlockMediaOnce);
-    window.removeEventListener('click', unlockMediaOnce);
-  });
-}
-window.addEventListener('pointerdown', unlockMediaOnce, { once: true });
-window.addEventListener('touchend',  unlockMediaOnce,  { once: true });
-window.addEventListener('click',      unlockMediaOnce, { once: true });
-
-// ================= RAYCAST / INTERACTION =================
+// ================= RAYCASTING =================
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
+let hoverTarget = null;
+
+function setCursor(ptr) {
+  renderer.domElement.style.cursor = ptr ? "pointer" : "default";
+}
+
+function highlightButton(btn, active) {
+  if (!btn || !btn.material) return;
+  btn.material.color.set(active ? "#3a7bff" : "#1e5df8");
+}
 
 function intersectAt(event, objects) {
-  const rect = renderer.domElement.getBoundingClientRect();
-  const x = ( (event.clientX - rect.left) / rect.width ) * 2 - 1;
-  const y = - ( (event.clientY - rect.top) / rect.height ) * 2 + 1;
-  mouse.set(x, y);
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
   return raycaster.intersectObjects(objects, false);
 }
 
-// Mutually exclusive playback helpers
-function playVideoWithAudio() {
-  if (!voiceover.paused) {
-    voiceover.pause();
-    updateCTAIcon(ctaModel, false, "Quantum Level");
-  }
-  video.muted = false;
-  video.volume = 1.0;
-  return video.play().then(() => {
-    updateCTAIcon(ctaVideo, true, "Scientific Computing");
-  }).catch(() => {
-    updateCTAIcon(ctaVideo, false, "Scientific Computing");
-  });
-}
-function pauseVideo() {
-  if (!video.paused) {
+window.addEventListener("mousemove", (e) => {
+  const hits = intersectAt(e, [ctaVideo, ctaModel, mainScreen]);
+  hoverTarget = hits.length > 0 ? hits[0].object : null;
+  highlightButton(ctaVideo, hoverTarget === ctaVideo);
+  highlightButton(ctaModel, hoverTarget === ctaModel);
+  setCursor(!!hoverTarget);
+});
+
+// ================= STOP ALL MEDIA =================
+function stopAllMedia(except = null) {
+  if (except !== "video" && !video.paused) {
     video.pause();
     updateCTAIcon(ctaVideo, false, "Scientific Computing");
   }
-}
-function playVoiceoverOnly() {
-  if (!video.paused) {
-    video.pause();
-    updateCTAIcon(ctaVideo, false, "Scientific Computing");
-  }
-  voiceover.muted = false;
-  voiceover.volume = 1.0;
-  return voiceover.play().then(() => {
-    updateCTAIcon(ctaModel, true, "Quantum Level");
-  }).catch(() => {
-    updateCTAIcon(ctaModel, false, "Quantum Level");
-  });
-}
-function pauseVoiceover() {
-  if (!voiceover.paused) {
+
+  if (except !== "voice" && !voiceover.paused) {
     voiceover.pause();
     updateCTAIcon(ctaModel, false, "Quantum Level");
   }
 }
 
-// Use pointer events (good for mobile + desktop)
-renderer.domElement.addEventListener("pointerdown", (e) => {
+// ================= SHOW RESTART BUTTONS ON PLAY =================
+video.addEventListener("play", () => {
+  restartAudioBtn.style.display = "none";
+  restartVideoBtn.style.display = "block";
+});
+
+voiceover.addEventListener("play", () => {
+  restartVideoBtn.style.display = "none";
+  restartAudioBtn.style.display = "block";
+});
+
+// ================= INTERACTION (CLICK HANDLER) =================
+window.addEventListener("click", (e) => {
   const hits = intersectAt(e, [ctaVideo, ctaModel, mainScreen]);
   if (hits.length === 0) return;
 
   const obj = hits[0].object;
 
-  // VIDEO: clicking screen or its CTA
+  // VIDEO CLICK
   if (obj === ctaVideo || obj === mainScreen) {
+    stopAllMedia("video");
+
     if (video.paused) {
-      playVideoWithAudio();
+      video.muted = false;
+      video.volume = 1.0;
+      video.play().then(() => {
+        updateCTAIcon(ctaVideo, true, "Scientific Computing");
+      });
     } else {
-      pauseVideo();
+      video.pause();
+      updateCTAIcon(ctaVideo, false, "Scientific Computing");
     }
+
     return;
   }
 
-  // VOICEOVER: clicking model CTA
+  // AUDIO CLICK
   if (obj === ctaModel) {
+    stopAllMedia("voice");
+
     if (voiceover.paused) {
-      playVoiceoverOnly();
+      voiceover.muted = false;
+      voiceover.play().then(() => {
+        updateCTAIcon(ctaModel, true, "Quantum Level");
+      });
     } else {
-      pauseVoiceover();
+      voiceover.pause();
+      updateCTAIcon(ctaModel, false, "Quantum Level");
     }
   }
 });
 
-// Reset icons when media ends
-video.addEventListener('ended', () => updateCTAIcon(ctaVideo, false, "Scientific Computing"));
-voiceover.addEventListener('ended', () => updateCTAIcon(ctaModel, false, "Quantum Level"));
+// ================= RESTART BUTTONS =================
+restartVideoBtn.addEventListener("click", () => {
+  stopAllMedia(null);
+  video.currentTime = 0;
+  video.muted = false;
+  video.play();
+  updateCTAIcon(ctaVideo, true, "Scientific Computing");
+});
+
+restartAudioBtn.addEventListener("click", () => {
+  stopAllMedia(null);
+  voiceover.currentTime = 0;
+  voiceover.muted = false;
+  voiceover.play();
+  updateCTAIcon(ctaModel, true, "Quantum Level");
+});
+
+// ================= MODEL MANIPULATION =================
+let manipulatingModel = false;
+let lastMouseX = 0;
+let lastMouseY = 0;
+
+function enterModelMode() {
+  manipulatingModel = true;
+  controls.enabled = false;
+}
+
+function exitModelMode() {
+  manipulatingModel = false;
+  controls.enabled = true;
+}
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") exitModelMode();
+});
+
+window.addEventListener("mousedown", (e) => {
+  if (!modelRoot) return;
+
+  const hits = intersectAt(e, [modelRoot]);
+  if (hits.length > 0) {
+    enterModelMode();
+    lastMouseX = e.clientX;
+    lastMouseY = e.clientY;
+  }
+});
+
+window.addEventListener("mousemove", (e) => {
+  if (!manipulatingModel || !modelRoot) return;
+
+  const dx = e.clientX - lastMouseX;
+  const dy = e.clientY - lastMouseY;
+
+  modelRoot.rotation.y -= dx * 0.01;
+
+  modelRoot.rotation.x = THREE.MathUtils.clamp(
+    modelRoot.rotation.x - dy * 0.01,
+    -Math.PI / 4,
+    Math.PI / 4
+  );
+
+  lastMouseX = e.clientX;
+  lastMouseY = e.clientY;
+});
 
 // ================= ANIMATION LOOP =================
 function animate() {
@@ -389,14 +451,16 @@ function animate() {
   const t = performance.now() * 0.001;
 
   ring.rotation.z = t * 0.4;
-
   attendees.forEach((a, i) => {
     a.position.y = Math.sin(t * 1.2 + i) * 0.05;
   });
 
-  // CTAs: video fixed, model faces camera around Y
   faceCamera(ctaVideo, false);
   faceCamera(ctaModel, true);
+
+  if (modelRoot && !manipulatingModel) {
+    modelRoot.rotation.y += 0.002;
+  }
 
   controls.update();
   renderer.render(scene, camera);
