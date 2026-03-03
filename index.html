@@ -25,7 +25,7 @@
       max-width: 360px;
     }
 
-    /* Restart buttons — same position, only one visible at once */
+    /* Restart buttons — share identical placement */
     .restart-btn {
       position: fixed;
       top: 20px;
@@ -38,10 +38,11 @@
       font-size: 14px;
       border: none;
       cursor: pointer;
-      display: none; /* JS reveals them only when media plays */
+      display: none; /* hidden by default; shown by JS only on play */
       opacity: 0.9;
       z-index: 9999;
     }
+
     .restart-btn:hover {
       opacity: 1;
       background: #3a7bff;
@@ -57,20 +58,20 @@
     • Scroll to zoom<br/><br/>
   </div>
 
-  <!-- Restart Buttons (one visible at a time) -->
+  <!-- Restart Buttons (same position; only one shown at a time by JS) -->
   <button id="restartVideoBtn" class="restart-btn">Restart Video</button>
   <button id="restartAudioBtn" class="restart-btn">Restart Audio</button>
 
   <!-- Three.js core -->
-  https://cdn.jsdelivr.net/npm/three@0.140.0/build/three.min.js</script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.140.0/build/three.min.js"></script>
 
   <!-- Controls -->
-  https://cdn.jsdelivr.net/npm/three@0.140.0/examples/js/controls/OrbitControls.js</script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.140.0/examples/js/controls/OrbitControls.js"></script>
 
   <!-- GLTF Loader -->
-  https://cdn.jsdelivr.net/npm/three@0.140.0/examples/js/loaders/GLTFLoader.js</script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.140.0/examples/js/loaders/GLTFLoader.js"></script>
 
   <!-- Main JS logic -->
-  main.js?v=1004</script>
+  <script src="main.js?v=1001"></script>
 </body>
 </html>
