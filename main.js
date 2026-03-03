@@ -28,7 +28,7 @@ controls.target.set(0, 4, 0);
 controls.update();
 
 // ================= LIGHTS =================
-const hemiLight = new THREE.HemisphereLight(0x88bbff, 0x222233, 0.7);
+const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.3);
 scene.add(hemiLight);
 
 const dirLight = new THREE.DirectionalLight(0xffffff, 0.9);
