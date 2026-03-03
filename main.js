@@ -104,7 +104,7 @@ video.load();
 
 const videoTexture = new THREE.VideoTexture(video);
 // IMPORTANT: Fix video colour + filtering + aliasing for r140
-videoTexture.encoding = THREE.SRGBEncoding;
+videoTexture.colorSpace = THREE.sRGBColorSpace;
 videoTexture.minFilter = THREE.LinearFilter;
 videoTexture.magFilter = THREE.LinearFilter;
 videoTexture.generateMipmaps = false;
