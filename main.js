@@ -14,6 +14,7 @@ camera.position.set(18, 14, 24);
 // Renderer
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.outputEncoding = THREE.sRGBEncoding; // correct for r140
+renderer.outputColorSpace = THREE.SRGBColorSpace || undefined; // optional fallback
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.7;
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -124,9 +125,11 @@ const mainScreen = new THREE.Mesh(
   new THREE.MeshBasicMaterial({
     map: videoTexture,
     side: THREE.DoubleSide,
-    toneMapped: false // prevents blue colour shift
+    toneMapped: false,
+    transparent: true
   })
 );
+
 mainScreen.position.set(0, 6.25, -13.7);
 scene.add(mainScreen);
 
